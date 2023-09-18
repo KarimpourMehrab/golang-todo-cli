@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 )
 
 type User struct {
@@ -15,16 +16,24 @@ type User struct {
 }
 
 type Task struct {
-	ID       int
-	Title    string
-	DueDate  string
-	Category string
-	isDone   bool
-	UserId   int
+	ID         int
+	Title      string
+	DueDate    string
+	CategoryId int
+	isDone     bool
+	UserId     int
+}
+
+type Category struct {
+	ID     int
+	Title  string
+	Color  string
+	UserId int
 }
 
 var userStorage []User
 var taskStorage []Task
+var categoryStorage []Category
 var AuthenticatedUser *User
 
 func (u *User) print() {
@@ -81,14 +90,29 @@ func createTask(scanner *bufio.Scanner) {
 	title = scanText("please enter the task title : ", scanner)
 	dueDate = scanText("please enter the task due date : ", scanner)
 	category = scanText("please enter the task category : ", scanner)
+	categoryId, err := strconv.Atoi(category)
+	if err != nil {
+		fmt.Println("please enter the valid category ! ")
+		return
+	}
+	categoryIdIsValid := false
+	for _, c := range categoryStorage {
+		if c.ID == categoryId && c.UserId == AuthenticatedUser.ID {
+			categoryIdIsValid = true
+		}
+	}
+	if !categoryIdIsValid {
+		fmt.Printf("authenticated user dosnt have category with id %v", categoryId)
+		return
+	}
 
 	newTask := Task{
-		ID:       len(taskStorage) + 1,
-		Title:    title,
-		Category: category,
-		DueDate:  dueDate,
-		isDone:   false,
-		UserId:   AuthenticatedUser.ID,
+		ID:         len(taskStorage) + 1,
+		Title:      title,
+		CategoryId: categoryId,
+		DueDate:    dueDate,
+		isDone:     false,
+		UserId:     AuthenticatedUser.ID,
 	}
 
 	taskStorage := append(taskStorage, newTask)
@@ -96,10 +120,18 @@ func createTask(scanner *bufio.Scanner) {
 }
 func createCategory(scanner *bufio.Scanner) {
 	AuthenticatedUser.print()
-	category := scanText("please enter the task category : ", scanner)
+	title := scanText("please enter the task category : ", scanner)
 	color := scanText("please enter the color of category : ", scanner)
 
-	fmt.Println(category, color)
+	c := Category{
+		ID:     len(categoryStorage) + 1,
+		Title:  title,
+		Color:  color,
+		UserId: AuthenticatedUser.ID,
+	}
+	categoryStorage = append(categoryStorage, c)
+	fmt.Println(categoryStorage)
+
 }
 func registerUser(scanner *bufio.Scanner) {
 
@@ -144,7 +176,6 @@ func listTasks() {
 	for _, task := range taskStorage {
 		if task.UserId == AuthenticatedUser.ID {
 			fmt.Println(task)
-
 			break
 		}
 	}
