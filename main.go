@@ -99,6 +99,7 @@ func createTask(scanner *bufio.Scanner) {
 	for _, c := range categoryStorage {
 		if c.ID == categoryId && c.UserId == AuthenticatedUser.ID {
 			categoryIdIsValid = true
+			break
 		}
 	}
 	if !categoryIdIsValid {
@@ -146,6 +147,36 @@ func registerUser(scanner *bufio.Scanner) {
 		Email:    email,
 	}
 	userStorage = append(userStorage, user)
+
+	path := "files/user.txt"
+	_, err := os.Stat(path)
+	var file *os.File
+	if err != nil {
+		fmt.Printf("the file %v dosn't exists ! \n", path)
+		var createErr error
+		file, createErr = os.Create(path)
+		if createErr != nil {
+			fmt.Println(createErr)
+			return
+		}
+	} else {
+		var openError error
+		file, openError = os.OpenFile(path, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+		if openError != nil {
+			fmt.Println(openError)
+			return
+		}
+
+	}
+	//newData := []byte("name: " + name + ", email: " + email + ", password: " + password + "\n")
+	newData := []byte(fmt.Sprintf("id: %v, name: %s, email: %s, password: %s \n", len(userStorage)+1, name, email, password))
+	_, err = file.Write(newData)
+	if err != nil {
+		fmt.Println("the error of write file ! ", err)
+	}
+	file.Close()
+
+	fmt.Println(err)
 	fmt.Println(userStorage)
 
 }
