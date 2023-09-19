@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type User struct {
@@ -36,11 +37,17 @@ var taskStorage []Task
 var categoryStorage []Category
 var AuthenticatedUser *User
 
+const userStoragePath = "./files/user.txt"
+
 func (u *User) print() {
 	fmt.Println(u.ID, u.Name, u.Email)
 }
 
 func main() {
+	//TODO : load the user storage from txt file
+	loadUserStorage()
+
+	return
 	command := flag.String("command", "no command", "create a new to do !")
 	flag.Parse()
 
@@ -52,6 +59,35 @@ func main() {
 		scanner.Scan()
 		*command = scanner.Text()
 	}
+}
+
+func loadUserStorage() {
+	file, _ := os.Open(userStoragePath)
+	//fileScanner := bufio.NewScanner(file)
+	//fileScanner.Split(bufio.ScanLines)
+	//for fileScanner.Scan() {
+	//	fmt.Println(fileScanner.Text())
+	//}
+	var data = make([]byte, 500)
+	_, err := file.Read(data)
+	if err != nil {
+		fmt.Println("read file error ", err)
+	}
+	usersSlice := strings.Split(string(data), "\n")
+	usersSlice = usersSlice[:len(usersSlice)-1]
+
+	for _, user := range usersSlice {
+		userSlice := strings.Split(user, ",")
+
+		for _, user := range userSlice {
+			user := strings.Split(user, ":")
+			if len(user) > 1 {
+				fmt.Println(user[0])
+				//fmt.Printf("%v : %v\n", user[0], user[1])
+			}
+		}
+	}
+
 }
 
 func runCommand(command string) {
@@ -148,20 +184,19 @@ func registerUser(scanner *bufio.Scanner) {
 	}
 	userStorage = append(userStorage, user)
 
-	path := "files/user.txt"
-	_, err := os.Stat(path)
+	_, err := os.Stat(userStoragePath)
 	var file *os.File
 	if err != nil {
-		fmt.Printf("the file %v dosn't exists ! \n", path)
+		fmt.Printf("the file %v dosn't exists ! \n", userStoragePath)
 		var createErr error
-		file, createErr = os.Create(path)
+		file, createErr = os.Create(userStoragePath)
 		if createErr != nil {
 			fmt.Println(createErr)
 			return
 		}
 	} else {
 		var openError error
-		file, openError = os.OpenFile(path, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+		file, openError = os.OpenFile(userStoragePath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 		if openError != nil {
 			fmt.Println(openError)
 			return
