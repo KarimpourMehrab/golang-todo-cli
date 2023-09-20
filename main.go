@@ -63,12 +63,7 @@ func main() {
 
 func loadUserStorage() {
 	file, _ := os.Open(userStoragePath)
-	//fileScanner := bufio.NewScanner(file)
-	//fileScanner.Split(bufio.ScanLines)
-	//for fileScanner.Scan() {
-	//	fmt.Println(fileScanner.Text())
-	//}
-	var data = make([]byte, 500)
+	var data = make([]byte, 300)
 	_, err := file.Read(data)
 	if err != nil {
 		fmt.Println("read file error ", err)
@@ -77,15 +72,30 @@ func loadUserStorage() {
 	usersSlice = usersSlice[:len(usersSlice)-1]
 
 	for _, user := range usersSlice {
-		userSlice := strings.Split(user, ",")
+		userFields := strings.Split(user, ",")
 
-		for _, user := range userSlice {
-			user := strings.Split(user, ":")
-			if len(user) > 1 {
-				fmt.Println(user[0])
-				//fmt.Printf("%v : %v\n", user[0], user[1])
+		var user = User{}
+		for _, field := range userFields {
+			fieldSlice := strings.Split(field, ":")
+			if len(fieldSlice) != 2 {
+				fmt.Println("field is not valid !")
+				continue
+			}
+			fieldName := strings.ReplaceAll(fieldSlice[0], " ", "")
+			fieldValue := strings.ReplaceAll(fieldSlice[1], " ", "")
+			switch fieldName {
+			case "id":
+				id, _ := strconv.Atoi(fieldValue)
+				user.ID = id
+			case "name":
+				user.Name = fieldValue
+			case "email":
+				user.Email = fieldValue
+			case "password":
+				user.Password = fieldValue
 			}
 		}
+		userStorage = append(userStorage, user)
 	}
 
 }
@@ -203,8 +213,7 @@ func registerUser(scanner *bufio.Scanner) {
 		}
 
 	}
-	//newData := []byte("name: " + name + ", email: " + email + ", password: " + password + "\n")
-	newData := []byte(fmt.Sprintf("id: %v, name: %s, email: %s, password: %s \n", len(userStorage)+1, name, email, password))
+	newData := []byte(fmt.Sprintf("id:%v, name:%s, email:%s, password:%s \n", len(userStorage)+1, name, email, password))
 	_, err = file.Write(newData)
 	if err != nil {
 		fmt.Println("the error of write file ! ", err)

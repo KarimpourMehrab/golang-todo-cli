@@ -1,2 +1,2 @@
-id: 2, name: mehrab karimpour, email: mehra0bkarimpour@gmail.com, password: 121212 
-id: 3, name: karent karimpout, email: karen@gmail.com, password: 121212 
+id:2, name:mehrab kaarimpour, email:mehrab@gmail.com, password:12
+id:3, name:karen karimpour, email:karen@gmail.com, password:1212
