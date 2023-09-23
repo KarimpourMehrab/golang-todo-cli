@@ -94,12 +94,25 @@ func loadUserStorage() {
 	usersSlice = usersSlice[:len(usersSlice)-1]
 
 	for _, usrStr := range usersSlice {
-		user, err := deserializeOtherSerializationUser(usrStr)
-		if err != nil {
-			fmt.Println(err)
-			return
+		var userStruct User
+		switch serializationMode {
+		case otherSerializationMode:
+			userStruct, err = deserializeOtherSerializationUser(usrStr)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			break
+		default:
+			uErr := json.Unmarshal([]byte(usrStr), &userStruct)
+			if uErr != nil {
+				fmt.Println("error in user unmarshal process !", uErr)
+				return
+			}
 		}
-		userStorage = append(userStorage, user)
+
+		userStorage = append(userStorage, userStruct)
 	}
 
 }
