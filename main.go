@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -9,45 +11,65 @@ import (
 	"strings"
 )
 
-type User struct {
-	ID       int
-	Name     string
-	Email    string
-	Password string
-}
+type (
+	User struct {
+		ID       int
+		Name     string
+		Email    string
+		Password string
+	}
 
-type Task struct {
-	ID         int
-	Title      string
-	DueDate    string
-	CategoryId int
-	isDone     bool
-	UserId     int
-}
+	Task struct {
+		ID         int
+		Title      string
+		DueDate    string
+		CategoryId int
+		isDone     bool
+		UserId     int
+	}
 
-type Category struct {
-	ID     int
-	Title  string
-	Color  string
-	UserId int
-}
+	Category struct {
+		ID     int
+		Title  string
+		Color  string
+		UserId int
+	}
+)
 
-var userStorage []User
-var taskStorage []Task
-var categoryStorage []Category
-var AuthenticatedUser *User
+var (
+	userStorage       []User
+	taskStorage       []Task
+	categoryStorage   []Category
+	AuthenticatedUser *User
+	serializationMode string
+)
 
-const userStoragePath = "./files/user.txt"
+const (
+	userStoragePath        = "./files/user.txt"
+	otherSerializationMode = "other"
+	jsonSerializationMode  = "json"
+)
 
 func (u *User) print() {
 	fmt.Println(u.ID, u.Name, u.Email)
 }
 
 func main() {
-	//TODO : load the user storage from txt file
+
 	loadUserStorage()
 
-	return
+	flag.String("serializationMode", jsonSerializationMode, "serialization mode to write data in storage")
+	serializationScanner := bufio.NewScanner(os.Stdin)
+	serializationM := scanText(fmt.Sprintf("please enter the serialization mode, %s | %s ", jsonSerializationMode, otherSerializationMode), serializationScanner)
+
+	if serializationM == otherSerializationMode {
+		serializationMode = otherSerializationMode
+	} else {
+		serializationMode = jsonSerializationMode
+	}
+
+	fmt.Println(serializationMode)
+
 	command := flag.String("command", "no command", "create a new to do !")
 	flag.Parse()
 
@@ -71,33 +93,48 @@ func loadUserStorage() {
 	usersSlice := strings.Split(string(data), "\n")
 	usersSlice = usersSlice[:len(usersSlice)-1]
 
-	for _, user := range usersSlice {
-		userFields := strings.Split(user, ",")
-
-		var user = User{}
-		for _, field := range userFields {
-			fieldSlice := strings.Split(field, ":")
-			if len(fieldSlice) != 2 {
-				fmt.Println("field is not valid !")
-				continue
-			}
-			fieldName := strings.ReplaceAll(fieldSlice[0], " ", "")
-			fieldValue := strings.ReplaceAll(fieldSlice[1], " ", "")
-			switch fieldName {
-			case "id":
-				id, _ := strconv.Atoi(fieldValue)
-				user.ID = id
-			case "name":
-				user.Name = fieldValue
-			case "email":
-				user.Email = fieldValue
-			case "password":
-				user.Password = fieldValue
-			}
+	for _, usrStr := range usersSlice {
+		user, err := deserializeOtherSerializationUser(usrStr)
+		if err != nil {
+			fmt.Println(err)
+			return
 		}
 		userStorage = append(userStorage, user)
 	}
 
+}
+func deserializeOtherSerializationUser(usrStr string) (User, error) {
+
+	if usrStr == "" {
+		return User{}, fmt.Errorf("invalid user string for deserilize it ! please pass the valid string")
+	}
+	userFields := strings.Split(usrStr, ",")
+
+	var user = User{}
+	for _, field := range userFields {
+		fieldSlice := strings.Split(field, ":")
+		if len(fieldSlice) != 2 {
+			fmt.Println("field is not valid !")
+			continue
+		}
+		fieldName := strings.ReplaceAll(fieldSlice[0], " ", "")
+		fieldValue := strings.ReplaceAll(fieldSlice[1], " ", "")
+		switch fieldName {
+		case "id":
+			id, err := strconv.Atoi(fieldValue)
+			if err != nil {
+				return User{}, errors.New("cannot convert string to integer for user ID filed ")
+			}
+			user.ID = id
+		case "name":
+			user.Name = fieldValue
+		case "email":
+			user.Email = fieldValue
+		case "password":
+			user.Password = fieldValue
+		}
+	}
+	return user, nil
 }
 
 func runCommand(command string) {
@@ -193,9 +230,13 @@ func registerUser(scanner *bufio.Scanner) {
 		Email:    email,
 	}
 	userStorage = append(userStorage, user)
+	writeToFile(user)
+}
 
+func writeToFile(user User) {
 	_, err := os.Stat(userStoragePath)
 	var file *os.File
+
 	if err != nil {
 		fmt.Printf("the file %v dosn't exists ! \n", userStoragePath)
 		var createErr error
@@ -211,18 +252,27 @@ func registerUser(scanner *bufio.Scanner) {
 			fmt.Println(openError)
 			return
 		}
-
 	}
-	newData := []byte(fmt.Sprintf("id:%v, name:%s, email:%s, password:%s \n", len(userStorage)+1, name, email, password))
-	_, err = file.Write(newData)
+	var userData []byte
+
+	if serializationMode == otherSerializationMode {
+		userData = []byte(fmt.Sprintf("id:%v, name:%s, email:%s, password:%s \n", len(userStorage)+1, user.Name, user.Email, user.Password))
+	} else {
+		var jsonMarshalingError error
+		userData, jsonMarshalingError = json.Marshal(user)
+		if jsonMarshalingError != nil {
+			fmt.Println("error in marshaling json ! ", jsonMarshalingError)
+			return
+		}
+	}
+	_, err = file.Write(userData)
+	defer file.Close()
 	if err != nil {
 		fmt.Println("the error of write file ! ", err)
 	}
-	file.Close()
 
 	fmt.Println(err)
 	fmt.Println(userStorage)
-
 }
 
 func loginUser(scanner *bufio.Scanner) {
