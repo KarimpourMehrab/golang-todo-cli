@@ -6,6 +6,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"golang.org/x/crypto/bcrypt"
+	_ "golang.org/x/crypto/bcrypt"
 	"os"
 	"strconv"
 	"strings"
@@ -56,8 +58,6 @@ func (u *User) print() {
 
 func main() {
 
-	loadUserStorage()
-
 	flag.String("serializationMode", jsonSerializationMode, "serialization mode to write data in storage")
 	serializationScanner := bufio.NewScanner(os.Stdin)
 	serializationM := scanText(fmt.Sprintf("please enter the serialization mode, %s | %s ", jsonSerializationMode, otherSerializationMode), serializationScanner)
@@ -68,7 +68,7 @@ func main() {
 		serializationMode = jsonSerializationMode
 	}
 
-	fmt.Println(serializationMode)
+	loadUserStorage(serializationMode)
 
 	command := flag.String("command", "no command", "create a new to do !")
 	flag.Parse()
@@ -83,7 +83,7 @@ func main() {
 	}
 }
 
-func loadUserStorage() {
+func loadUserStorage(serializationMode string) {
 	file, _ := os.Open(userStoragePath)
 	var data = make([]byte, 300)
 	_, err := file.Read(data)
@@ -111,7 +111,7 @@ func loadUserStorage() {
 				return
 			}
 		}
-
+		userStruct.print()
 		userStorage = append(userStorage, userStruct)
 	}
 
@@ -236,10 +236,15 @@ func registerUser(scanner *bufio.Scanner) {
 	email := scanText("please enter the user email : ", scanner)
 	password := scanText("please enter the user password : ", scanner)
 
+	passHashedByte, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	if err != nil {
+		fmt.Println("hashing password has error : ", err)
+	}
+
 	user := User{
 		ID:       len(userStorage) + 1,
 		Name:     name,
-		Password: password,
+		Password: string(passHashedByte),
 		Email:    email,
 	}
 	userStorage = append(userStorage, user)
@@ -278,6 +283,7 @@ func writeToFile(user User) {
 			return
 		}
 	}
+	userData = append(userData, []byte("\n")...)
 	_, err = file.Write(userData)
 	defer file.Close()
 	if err != nil {
@@ -293,7 +299,8 @@ func loginUser(scanner *bufio.Scanner) {
 	password := scanText("please enter the user password :", scanner)
 
 	for _, user := range userStorage {
-		if user.Email == email && user.Password == password {
+
+		if user.Email == email && nil == bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) {
 			AuthenticatedUser = &user
 
 			break
