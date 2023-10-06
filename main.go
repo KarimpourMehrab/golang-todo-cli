@@ -11,6 +11,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"todo/repository/memoryStore"
+	"todo/service/task"
 )
 
 type (
@@ -57,7 +59,8 @@ func (u *User) print() {
 }
 
 func main() {
-
+	TaskMemoryRepo := memoryStore.NewTaskRepo()
+	taskService := task.NewService(TaskMemoryRepo)
 	flag.String("serializationMode", jsonSerializationMode, "serialization mode to write data in storage")
 	serializationScanner := bufio.NewScanner(os.Stdin)
 	serializationM := scanText(fmt.Sprintf("please enter the serialization mode, %s | %s ", jsonSerializationMode, otherSerializationMode), serializationScanner)
@@ -76,7 +79,7 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
-		runCommand(*command)
+		runCommand(*command, &taskService)
 		fmt.Println("please enter another command :")
 		scanner.Scan()
 		*command = scanner.Text()
@@ -150,7 +153,7 @@ func deserializeOtherSerializationUser(usrStr string) (User, error) {
 	return user, nil
 }
 
-func runCommand(command string) {
+func runCommand(command string, taskService *task.Service) {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	if command != "register" && command != "exit" && AuthenticatedUser == nil {
@@ -163,13 +166,13 @@ func runCommand(command string) {
 	fmt.Println("cmd : ", command)
 	switch command {
 	case "create-task":
-		createTask(scanner)
+		createTask(scanner, taskService)
 	case "create-category":
 		createCategory(scanner)
 	case "register":
 		registerUser(scanner)
 	case "list-task":
-		listTasks()
+		listTasks(taskService)
 	case "exit":
 		os.Exit(0)
 	case "q":
@@ -179,7 +182,7 @@ func runCommand(command string) {
 	}
 }
 
-func createTask(scanner *bufio.Scanner) {
+func createTask(scanner *bufio.Scanner, service *task.Service) {
 	AuthenticatedUser.print()
 	var title, dueDate, category string
 
@@ -203,17 +206,17 @@ func createTask(scanner *bufio.Scanner) {
 		return
 	}
 
-	newTask := Task{
-		ID:         len(taskStorage) + 1,
-		Title:      title,
-		CategoryId: categoryId,
-		DueDate:    dueDate,
-		isDone:     false,
-		UserId:     AuthenticatedUser.ID,
+	response, errCreateTask := service.CreateTask(task.CreateRequest{
+		Title:               title,
+		CategoryId:          categoryId,
+		DueDate:             dueDate,
+		AuthenticatedUserId: AuthenticatedUser.ID,
+	})
+	if errCreateTask != nil {
+		fmt.Println(errCreateTask)
 	}
 
-	taskStorage := append(taskStorage, newTask)
-	fmt.Println(taskStorage)
+	fmt.Println(response)
 }
 func createCategory(scanner *bufio.Scanner) {
 	AuthenticatedUser.print()
@@ -317,11 +320,13 @@ func scanText(str string, scanner *bufio.Scanner) string {
 	return scanner.Text()
 }
 
-func listTasks() {
-	for _, task := range taskStorage {
-		if task.UserId == AuthenticatedUser.ID {
-			fmt.Println(task)
-			break
-		}
+func listTasks(service *task.Service) {
+	usersTasks, err := service.List(task.ListRequest{
+		UserId: AuthenticatedUser.ID,
+	})
+	if err != nil {
+		fmt.Println(err)
 	}
+
+	fmt.Println(usersTasks)
 }
