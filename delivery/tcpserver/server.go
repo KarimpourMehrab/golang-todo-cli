@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"todo/delivery/deliveryparam"
 	"todo/repository/memoryStore"
 	"todo/service/task"
 )
@@ -23,26 +24,22 @@ func main() {
 		}
 	}()
 
-	type Request struct {
-		Command string
-	}
-
 	for {
-		data := make([]byte, 3024)
+		data := make([]byte, 1024)
 		conn, connErr := listener.Accept()
 		if connErr != nil {
-			fmt.Println(connErr)
+			fmt.Println("connErr", connErr)
 			continue
 		}
 
-		_, readErr := conn.Read(data)
+		numberOfReadData, readErr := conn.Read(data)
 		if readErr != nil {
-			fmt.Println(readErr)
+			fmt.Println("readErr", readErr)
 		}
 
-		var req = &Request{Command: string(data)}
-		if reqErr := json.Unmarshal(data, req); reqErr != nil {
-			fmt.Println(reqErr)
+		var req = &deliveryparam.Request{Command: string(data)}
+		if reqErr := json.Unmarshal(data[:numberOfReadData], req); reqErr != nil {
+			fmt.Println("reqErr : ", reqErr)
 			continue
 		}
 
@@ -58,14 +55,14 @@ func main() {
 			if cTaskErr != nil {
 				_, wErr := conn.Write([]byte(cTaskErr.Error()))
 				if wErr != nil {
-					fmt.Println(wErr)
+					fmt.Println("wErr", wErr)
 				}
 				continue
 			}
 			cleanedRes, _ := json.Marshal(response)
 			_, wErr := conn.Write(cleanedRes)
 			if wErr != nil {
-				fmt.Println(wErr)
+				fmt.Println("wErr", wErr)
 				continue
 			}
 
