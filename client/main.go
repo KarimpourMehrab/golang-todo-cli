@@ -20,6 +20,15 @@ func main() {
 	req := deliveryparam.Request{
 		Command: command,
 	}
+
+	if command == "create-task" {
+		req.CreateTaskRequest = deliveryparam.CreateTaskRequest{
+			Title:      "test22222",
+			DueDate:    "test22222",
+			CategoryId: 1,
+		}
+	}
+
 	serializedRequest, mErr := json.Marshal(req)
 	if mErr != nil {
 		fmt.Println(mErr)
