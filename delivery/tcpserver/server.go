@@ -12,9 +12,11 @@ import (
 func main() {
 	taskRepo := memoryStore.NewTaskRepo()
 	taskService := task.NewService(taskRepo)
-	listener, listenErr := net.Listen("tcp", "localhost:5000")
+	listener, listenErr := net.Listen("tcp", ":5000")
 	if listenErr != nil {
 		fmt.Println(listenErr)
+	} else {
+		fmt.Printf("tcp server listened on %s\n", listener.Addr())
 	}
 
 	defer func() {
@@ -65,7 +67,6 @@ func main() {
 				fmt.Println("wErr", wErr)
 				continue
 			}
-
 		}
 
 	}
