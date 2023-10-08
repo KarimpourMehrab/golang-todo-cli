@@ -48,9 +48,9 @@ func main() {
 		switch req.Command {
 		case "create-task":
 			response, cTaskErr := taskService.CreateTask(task.CreateRequest{
-				Title:               "",
-				DueDate:             "",
-				CategoryId:          1,
+				Title:               req.CreateTaskRequest.Title,
+				DueDate:             req.CreateTaskRequest.DueDate,
+				CategoryId:          req.CreateTaskRequest.CategoryId,
 				AuthenticatedUserId: 1,
 			})
 
