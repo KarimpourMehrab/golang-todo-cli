@@ -6,12 +6,16 @@ import (
 	"net"
 	"todo/delivery/deliveryparam"
 	"todo/repository/memoryStore"
+	"todo/service/category"
 	"todo/service/task"
 )
 
 func main() {
 	taskRepo := memoryStore.NewTaskRepo()
 	taskService := task.NewService(taskRepo)
+	categoryRepo := memoryStore.NewCategoryRepo()
+	categoryService := category.NewService(categoryRepo)
+
 	listener, listenErr := net.Listen("tcp", ":5000")
 	if listenErr != nil {
 		fmt.Println(listenErr)
@@ -66,6 +70,29 @@ func main() {
 			if wErr != nil {
 				fmt.Println("wErr", wErr)
 				continue
+			}
+		case "create-category":
+			newCategory, createCategoryErr := categoryService.CreateCategory(category.CreateRequest{
+				Title:  req.CreateCategoryRequest.Title,
+				Color:  req.CreateCategoryRequest.Color,
+				UserId: 1,
+			})
+
+			if createCategoryErr != nil {
+				_, wErr := conn.Write([]byte(createCategoryErr.Error()))
+				if wErr != nil {
+					fmt.Println(wErr)
+				}
+				fmt.Println(createCategoryErr)
+				continue
+			}
+			responseCreate, err := json.Marshal(newCategory)
+			if err != nil {
+				fmt.Println(err)
+			}
+			_, wErr := conn.Write(responseCreate)
+			if wErr != nil {
+
 			}
 		}
 
